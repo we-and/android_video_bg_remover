@@ -15,9 +15,18 @@ import uk.co.weand.androidvideobgremover.ui.theme.AndroidVideoBgRemoverTheme
 
 import android.net.Uri
 import android.widget.MediaController
+import androidx.compose.material3.Button
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.ReturnCode
+import android.widget.Toast
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+
+//import androidx.appcompat.app.AppCompatActivity
 class MainActivity : ComponentActivity() {
 
 
@@ -27,14 +36,67 @@ class MainActivity : ComponentActivity() {
             AndroidVideoBgRemoverTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    Greeting("Android")
-                   VideoPlayerScreen()
+                    MainScreen()
+
                 }
             }
         }
 
 
     }
+    @Composable
+    fun MainScreen() {
+        // Using Column to stack the greeting and the video player vertically
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Greeting(name = "Android")
+            Spacer(modifier = Modifier.height(20.dp)) // Space between VideoPlayer and Button
+            // Button to perform an action
+            Button(onClick = { remove_background() }) {
+                Text("Remove background")
+            }
+            Spacer(modifier = Modifier.height(20.dp)) // Space between Greeting and Button
+            VideoPlayerScreen()
+
+        }
+    }
+
+    fun remove_background(){
+        println("------------------------------------------------------------");
+
+        // Example FFmpeg command to replace green background with black
+        val ffmpegCommand = "-i /path/to/input.mp4 -filter_complex " +
+                "[0:v]chromakey=0x00FF00:0.1:0.2,format=yuv420p[ckout];" +
+                "[ckout]colorkey=color=black:similarity=0.1:blend=0.0[out]" +
+                " -map [out] /path/to/output.mp4"
+println(ffmpegCommand);
+        // Execute the command
+        FFmpegKit.executeAsync(ffmpegCommand, { session ->
+            println("session");
+
+            val returnCode = session.returnCode
+            if (ReturnCode.isSuccess(returnCode)) {
+                // Command execution completed successfully.
+                runOnUiThread {
+                    Toast.makeText(this, "Video processing completed successfully.", Toast.LENGTH_LONG).show()
+                }
+            } else if (ReturnCode.isCancel(returnCode)) {
+                // Command execution cancelled by user.
+                runOnUiThread {
+                    Toast.makeText(this, "Video processing was cancelled.", Toast.LENGTH_LONG).show()
+                }
+            } else {
+                // Command execution failed.
+                runOnUiThread {
+                    Toast.makeText(this, "Failed to process video.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }, null)
+    }
+
 }
 
 @Composable
@@ -69,7 +131,7 @@ fun VideoPlayerScreen() {
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
-        text = "BG Background remover $name!",
+        text = "BG Background remover",
         modifier = modifier
     )
 }
