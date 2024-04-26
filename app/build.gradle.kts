@@ -47,7 +47,9 @@ android {
 }
 
 dependencies {
+    implementation("com.arthenica:ffmpeg-kit-full:4.5.1")
 
+    // implementation(libs.ffmpegKit)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
