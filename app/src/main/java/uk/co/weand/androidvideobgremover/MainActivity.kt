@@ -113,7 +113,7 @@ class MainActivity : ComponentActivity() {
         val outputPath = getFileFromRawResource(this, R.raw.dogvideo3, "output.mp4")
 
         // Example FFmpeg command to replace green background with black
-        val ffmpegCommand = "-i "+videoPath+"  -filter_complex " +
+        val ffmpegCommand = "-y -i "+videoPath+"  -filter_complex " +
                 "[0:v]chromakey=0x00FF00:0.1:0.2,format=yuv420p[ckout];" +
                 "[ckout]colorkey=color=black:similarity=0.1:blend=0.0[out]" +
                 " -map [out] "+outputPath;
