@@ -82,6 +82,19 @@ class MainActivity : ComponentActivity() {
 
         return destinationFile.absolutePath
     }
+
+    fun deleteOutputFile(filePath: String): Boolean {
+        val file = File(filePath)
+        return if (file.exists()) {
+            println("output exists, deleting ${filePath}");
+
+            file.delete()
+        } else {
+            println("output not existing yet");
+
+            false // File does not exist, so deletion was not necessary
+        }
+    }
     fun getVideoPathFromRaw(context: Context, resourceId: Int, fileName: String): String {
         val destinationFile = File(context.filesDir, fileName)
 
@@ -109,14 +122,30 @@ class MainActivity : ComponentActivity() {
     }
 
     fun remove_background_sync() {
+        val outputPath = getFileFromRawResource(this, R.raw.dogvideo3, "output.mp4")
+        deleteOutputFile(outputPath)
         println("------------------------------------------------------------");
         val ffmpegCommand = getCommand();
         println(ffmpegCommand);
         println(" * execute");
 
         FFmpegKit.execute(ffmpegCommand);
+        println(" * done")
 
+
+        val outputSize=getFileSize(outputPath)
+        println(" * done output size=${outputSize}")
     }
+
+    fun getFileSize(filePath: String): Long {
+        val file = File(filePath)
+        return if (file.exists()) {
+            file.length()
+        } else {
+            -1 // File does not exist
+        }
+    }
+
         fun remove_background_async(){
             println("------------------------------------------------------------");
             val ffmpegCommand = getCommand();
