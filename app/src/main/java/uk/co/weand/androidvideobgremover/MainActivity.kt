@@ -6,6 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import java.io.File
 import java.io.FileOutputStream
+
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
+
 import java.io.InputStream
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +34,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+
 //import androidx.appcompat.app.AppCompatActivity
 class MainActivity : ComponentActivity() {
 
@@ -50,6 +67,11 @@ class MainActivity : ComponentActivity() {
     }
     @Composable
     fun MainScreen() {
+        val coroutineScope = rememberCoroutineScope()
+        var showVideoPopup by remember { mutableStateOf(false) } // State to control the visibility of the popup
+        val outputPath = getFileFromRawResource(this, R.raw.dogvideo3, "output.mp4")
+
+
         // Using Column to stack the greeting and the video player vertically
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -66,8 +88,24 @@ class MainActivity : ComponentActivity() {
             Button(onClick = { remove_background_async() }) {
                 Text("Remove background async")
             }
+
             Spacer(modifier = Modifier.height(20.dp)) // Space between Greeting and Button
+            Button(onClick = {
+                showVideoPopup = true  // Set the state to true when button is clicked
+            }) {
+                Text("Show result")
+            }
+            Spacer(modifier = Modifier.height(20.dp)) // Space between Greeting and Button
+
             VideoPlayerScreen()
+
+
+            // Conditionally show the VideoPopup based on the state
+            if (showVideoPopup) {
+                VideoPopup(outputPath) {
+                    showVideoPopup = false  // Pass a lambda to handle closing
+                }
+            }
 
         }
     }
@@ -120,6 +158,73 @@ class MainActivity : ComponentActivity() {
         println(ffmpegCommand);
         return ffmpegCommand;
     }
+    @Composable
+    fun VideoPopup(videoPath: String,onClose: () -> Unit) {
+        var showDialog by remember { mutableStateOf(true) }  // State to show or hide the dialog
+
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = onClose,  // Use the onClose lambda to close the dialog
+
+//                onDismissRequest = { showDialog = false },  // Handle dismiss
+                properties = DialogProperties(usePlatformDefaultWidth = false),
+                title = { Text("Video Playback") },
+                text = {
+                    // VideoView setup in Compose
+                    AndroidView(factory = { context ->
+                        VideoView(context).apply {
+                            setVideoURI(Uri.parse(videoPath))
+                            val mediaController = MediaController(context)
+                            setMediaController(mediaController)
+                            mediaController.setAnchorView(this)
+                            start()  // Auto-play the video
+                        }
+                    })
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showDialog = false }
+                    ) {
+                        Text("Close")
+                    }
+                }
+            )
+        }
+    }
+    @Composable
+    private fun ShowVideoPopupComp(videoPath: String) {
+        // Create a Dialog state
+        val showDialog = remember { mutableStateOf(true) }
+
+        if (showDialog.value) {
+            // Create a Dialog using Jetpack Compose
+            Dialog(
+                onDismissRequest = {
+                    showDialog.value = false
+//                    onDismiss()
+                }
+            ) {
+                // Create a Box to hold the VideoView
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f) // Adjust the aspect ratio as needed
+                ) {
+                    // Create a VideoView using AndroidView
+                    AndroidView(
+                        factory = { context ->
+                            VideoView(context).apply {
+                                setVideoPath(videoPath)
+                                setMediaController(MediaController(context))
+                                start()
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+    }
 
     fun remove_background_sync() {
         val outputPath = getFileFromRawResource(this, R.raw.dogvideo3, "output.mp4")
@@ -135,6 +240,7 @@ class MainActivity : ComponentActivity() {
 
         val outputSize=getFileSize(outputPath)
         println(" * done output size=${outputSize}")
+
     }
 
     fun getFileSize(filePath: String): Long {
@@ -203,6 +309,9 @@ fun VideoPlayerScreen() {
             mediaController.setAnchorView(videoView)
             videoView.setMediaController(mediaController)
             videoView.start()
+            videoView.setOnPreparedListener { mp ->
+                mp.isLooping = true
+            }
             videoView
         },
         modifier = Modifier.fillMaxSize()
