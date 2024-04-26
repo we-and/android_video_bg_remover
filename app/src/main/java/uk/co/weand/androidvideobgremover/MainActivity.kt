@@ -1,9 +1,12 @@
 package uk.co.weand.androidvideobgremover
-
+import android.content.Context
 import android.os.Bundle
 import android.widget.VideoView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -12,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import uk.co.weand.androidvideobgremover.ui.theme.AndroidVideoBgRemoverTheme
-
+import com.arthenica.ffmpegkit.FFmpegKitConfig;
 import android.net.Uri
 import android.widget.MediaController
 import androidx.compose.material3.Button
@@ -32,6 +35,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+      //  FFmpegKitConfig.init(this)
         setContent {
             AndroidVideoBgRemoverTheme {
                 // A surface container using the 'background' color from the theme
@@ -55,24 +59,71 @@ class MainActivity : ComponentActivity() {
             Greeting(name = "Android")
             Spacer(modifier = Modifier.height(20.dp)) // Space between VideoPlayer and Button
             // Button to perform an action
-            Button(onClick = { remove_background() }) {
-                Text("Remove background")
+            Button(onClick = { remove_background_sync() }) {
+                Text("Remove background sync")
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            Button(onClick = { remove_background_async() }) {
+                Text("Remove background async")
             }
             Spacer(modifier = Modifier.height(20.dp)) // Space between Greeting and Button
             VideoPlayerScreen()
 
         }
     }
+    fun getFileFromRawResource(context: Context, resourceId: Int, fileName: String): String {
+        val destinationFile = File(context.filesDir, fileName)
 
-    fun remove_background(){
-        println("------------------------------------------------------------");
+        context.resources.openRawResource(resourceId).use { inputStream ->
+            FileOutputStream(destinationFile).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+
+        return destinationFile.absolutePath
+    }
+    fun getVideoPathFromRaw(context: Context, resourceId: Int, fileName: String): String {
+        val destinationFile = File(context.filesDir, fileName)
+
+        context.resources.openRawResource(resourceId).use { inputStream ->
+            FileOutputStream(destinationFile).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+
+        return destinationFile.absolutePath
+    }
+    fun getCommand() :String{
+
+        //   val videoPath = "android.resource://uk.co.weand.androidvideobgremover/${R.raw.dogvideo3}"
+        val videoPath = getVideoPathFromRaw(this, R.raw.dogvideo3, "dogvideo3.webm")
+        val outputPath = getFileFromRawResource(this, R.raw.dogvideo3, "output.mp4")
 
         // Example FFmpeg command to replace green background with black
-        val ffmpegCommand = "-i /path/to/input.mp4 -filter_complex " +
+        val ffmpegCommand = "-i "+videoPath+"  -filter_complex " +
                 "[0:v]chromakey=0x00FF00:0.1:0.2,format=yuv420p[ckout];" +
                 "[ckout]colorkey=color=black:similarity=0.1:blend=0.0[out]" +
-                " -map [out] /path/to/output.mp4"
-println(ffmpegCommand);
+                " -map [out] "+outputPath;
+        println(ffmpegCommand);
+        return ffmpegCommand;
+    }
+
+    fun remove_background_sync() {
+        println("------------------------------------------------------------");
+        val ffmpegCommand = getCommand();
+        println(ffmpegCommand);
+        println(" * execute");
+
+        FFmpegKit.execute(ffmpegCommand);
+
+    }
+        fun remove_background_async(){
+            println("------------------------------------------------------------");
+            val ffmpegCommand = getCommand();
+            println(ffmpegCommand);
+            println(" * execute");
+
+            println(" * executeAsync");
         // Execute the command
         FFmpegKit.executeAsync(ffmpegCommand, { session ->
             println("session");
