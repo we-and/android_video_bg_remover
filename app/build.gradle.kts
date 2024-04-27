@@ -1,12 +1,22 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    id("com.chaquo.python")
 }
 
 android {
     namespace = "uk.co.weand.androidvideobgremover"
     compileSdk = 34
+    flavorDimensions += "pyVersion"
+    productFlavors {
 
+        create("py310") {
+            versionNameSuffix = "-py310"
+            dimension = "pyVersion" }
+        create("py311") {
+            versionNameSuffix = "-py311"
+            dimension = "pyVersion" }
+    }
     defaultConfig {
         applicationId = "uk.co.weand.androidvideobgremover"
         minSdk = 26
@@ -17,6 +27,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+        ndk {
+            // On Apple silicon, you can omit x86_64.
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
     }
 
@@ -45,7 +59,18 @@ android {
         }
     }
 }
-
+chaquopy {
+    productFlavors {
+        getByName("py310") { version = "3.10" }
+        getByName("py311") { version = "3.11" }
+    }
+    defaultConfig {
+        pip {
+            // A requirement specifier, with or without a version number:
+            install("opencv-python-headless")
+        }
+    }
+}
 dependencies {
     implementation("com.arthenica:ffmpeg-kit-full:4.5.1")
 

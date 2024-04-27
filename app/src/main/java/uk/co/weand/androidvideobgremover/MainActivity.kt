@@ -7,24 +7,27 @@ import androidx.activity.compose.setContent
 import java.io.File
 import java.io.FileOutputStream
 
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
+
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-
-
-import java.io.InputStream
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import uk.co.weand.androidvideobgremover.ui.theme.AndroidVideoBgRemoverTheme
-import com.arthenica.ffmpegkit.FFmpegKitConfig;
 import android.net.Uri
 import android.widget.MediaController
 import androidx.compose.material3.Button
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.ReturnCode
@@ -52,6 +55,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
       //  FFmpegKitConfig.init(this)
         setContent {
             AndroidVideoBgRemoverTheme {
@@ -65,39 +69,176 @@ class MainActivity : ComponentActivity() {
 
 
     }
+
+    @Composable
+    fun BackgroundRemovalStrategySelector() {
+        var expanded by remember { mutableStateOf(false) }
+        var selectedStrategy by remember { mutableStateOf("Select a strategy") }
+        var selectedSyncMde by remember { mutableStateOf("Select a strategy") }
+        var selectedVideo by remember { mutableStateOf("Select a strategy") }
+
+
+        Column {
+            ClickableText(
+                text = AnnotatedString(selectedStrategy),
+                onClick = { expanded = true }
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                val strategies = listOf("FFmpeg Chroma Key", "Python OpenCV","AI-Based", "Manual Selection")
+                strategies.forEach { strategy ->
+                    DropdownMenuItem(
+                        text = { Text(strategy) },
+                        onClick = {
+                            selectedStrategy = strategy
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun SyncModeSelector() {
+        var expanded by remember { mutableStateOf(false) }
+        var selectedStrategy by remember { mutableStateOf("Select a mode") }
+
+        Column {
+            ClickableText(
+                text = AnnotatedString(selectedStrategy),
+                onClick = { expanded = true }
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                val strategies = listOf("Sync", "Async")
+                strategies.forEach { strategy ->
+                    DropdownMenuItem(
+                        text = { Text(strategy) },
+                        onClick = {
+                            selectedStrategy = strategy
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun VideoSelector(selectedStr:String, onOptionSelected: (String) -> Unit,) {
+        var expanded by remember { mutableStateOf(false) }
+//        var selectedStrategy by remember { mutableStateOf("Select a video") }
+
+        Column {
+            ClickableText(
+                text = AnnotatedString(selectedStr),
+                onClick = { expanded = true }
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                val strategies = listOf("Green bg cat", "Grey background dog")
+                strategies.forEach { strategy ->
+                    DropdownMenuItem(
+                        text = { Text(strategy) },
+                        onClick = {
+                            println("Strategy:"+strategy);
+                            onOptionSelected(strategy)
+                           // selectedStrategy = strategy
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
     @Composable
     fun MainScreen() {
         val coroutineScope = rememberCoroutineScope()
         var showVideoPopup by remember { mutableStateOf(false) } // State to control the visibility of the popup
-        val outputPath = getFileFromRawResource(this, R.raw.dogvideo3, "output.mp4")
+        var selectedVideo by remember { mutableStateOf("Select a video") }
+        val outputPath = getFileFromRawResource(this, getInputResourceByKey(selectedVideo), getOutputFilenameByKey(selectedVideo))
+        val context = LocalContext.current
+        if (! Python.isStarted()) {
+            Python.start( AndroidPlatform(context));
+        }
 
 
         // Using Column to stack the greeting and the video player vertically
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Greeting(name = "Android")
-            Spacer(modifier = Modifier.height(20.dp)) // Space between VideoPlayer and Button
-            // Button to perform an action
-            Button(onClick = { remove_background_sync() }) {
-                Text("Remove background sync")
+            Spacer(modifier = Modifier.height(20.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()  // This makes the row fill the maximum width available
+                    .padding(horizontal = 16.dp),  // Adds padding on both sides of the Row
+                horizontalArrangement = Arrangement.SpaceBetween  // This spaces children evenly along the row
+
+            ) {
+                Text(
+                    text = "Video",
+                   // modifier = modifier
+                )
+                VideoSelector(selectedVideo, onOptionSelected = { option ->
+                    selectedVideo = option
+                },)
             }
             Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = { remove_background_async() }) {
-                Text("Remove background async")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()  // This makes the row fill the maximum width available
+                    .padding(horizontal = 16.dp),  // Adds padding on both sides of the Row
+                horizontalArrangement = Arrangement.SpaceBetween  // This spaces children evenly along the row
+
+            ) {
+                Text(
+                    text = "Removal strategy",
+                    // modifier = modifier
+                )
+                BackgroundRemovalStrategySelector()
+            }
+            Spacer(modifier = Modifier.height(20.dp)) // Space between VideoPlayer and Button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()  // This makes the row fill the maximum width available
+                    .padding(horizontal = 16.dp),  // Adds padding on both sides of the Row
+                horizontalArrangement = Arrangement.SpaceBetween  // This spaces children evenly along the row
+
+            ) {
+                Text(
+                    text = "Run mode",
+                    // modifier = modifier
+                )
+                SyncModeSelector()
+            }
+            Spacer(modifier = Modifier.height(20.dp)) // Space between VideoPlayer and Button
+
+            // Button to perform an action
+            Button(onClick = { runPython(selectedVideo,context) }) {
+                Text("Run on \""+selectedVideo+"\"")
             }
 
             Spacer(modifier = Modifier.height(20.dp)) // Space between Greeting and Button
             Button(onClick = {
                 showVideoPopup = true  // Set the state to true when button is clicked
             }) {
-                Text("Show result")
+                Text("Popup result")
             }
             Spacer(modifier = Modifier.height(20.dp)) // Space between Greeting and Button
 
-            VideoPlayerScreen()
+            VideoPlayerScreen(selectedVideo)
 
 
             // Conditionally show the VideoPopup based on the state
@@ -123,16 +264,18 @@ class MainActivity : ComponentActivity() {
 
     fun deleteOutputFile(filePath: String): Boolean {
         val file = File(filePath)
+        println("DELETE ${filePath}");
+
         return if (file.exists()) {
-            println("output exists, deleting ${filePath}");
+            println("output exists, deleting");
 
             file.delete()
         } else {
             println("output not existing yet");
-
             false // File does not exist, so deletion was not necessary
         }
     }
+
     fun getVideoPathFromRaw(context: Context, resourceId: Int, fileName: String): String {
         val destinationFile = File(context.filesDir, fileName)
 
@@ -144,18 +287,18 @@ class MainActivity : ComponentActivity() {
 
         return destinationFile.absolutePath
     }
-    fun getCommand() :String{
+    fun getCommand(selectedVideo: String) :String{
 
-        //   val videoPath = "android.resource://uk.co.weand.androidvideobgremover/${R.raw.dogvideo3}"
-        val videoPath = getVideoPathFromRaw(this, R.raw.dogvideo3, "dogvideo3.webm")
-        val outputPath = getFileFromRawResource(this, R.raw.dogvideo3, "output.mp4")
+        val videoPath = getVideoPathFromRaw(this, getInputResourceByKey(selectedVideo), getInputFilenameByKey(selectedVideo))
+        println("PATH: "+videoPath);
+        val outputPath = getFileFromRawResource(this, getInputResourceByKey(selectedVideo), getOutputFilenameByKey(selectedVideo))
 
-        // Example FFmpeg command to replace green background with black
+//        val outputPath = getFileFromRawResource(this, R.raw.dogvideo3, "output.mp4")
+        println("OUTPUT PATH: "+outputPath);
         val ffmpegCommand = "-y -i "+videoPath+"  -filter_complex " +
                 "[0:v]chromakey=0x00FF00:0.1:0.2,format=yuv420p[ckout];" +
                 "[ckout]colorkey=color=black:similarity=0.1:blend=0.0[out]" +
                 " -map [out] "+outputPath;
-        println(ffmpegCommand);
         return ffmpegCommand;
     }
     @Composable
@@ -226,12 +369,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun remove_background_sync() {
-        val outputPath = getFileFromRawResource(this, R.raw.dogvideo3, "output.mp4")
-        deleteOutputFile(outputPath)
+
+    fun runPython(selectedVideo: String,localContext: Context){
+        val videoPath = getVideoPathFromRaw(this, getInputResourceByKey(selectedVideo), getInputFilenameByKey(selectedVideo))
+        println("PATH: "+videoPath);
+        val outputPath = getFileFromRawResource(this, getInputResourceByKey(selectedVideo), getOutputFilenameByKey(selectedVideo))
+
+
+        val python = Python.getInstance()
+        val pythonModule = python.getModule("background_removal")
+        println(" * execute");
+        // Call the function from Python script
+        val result = pythonModule.callAttr("remove_background", "/path/to/input.jpg", "/path/to/output.jpg")
+        println(" * done")
+        Toast.makeText(localContext, "Done", Toast.LENGTH_SHORT).show()
+    }
+
+    fun runFFMpeg_sync(selectedVideo: String, localContext: Context) {
         println("------------------------------------------------------------");
-        val ffmpegCommand = getCommand();
-        println(ffmpegCommand);
+
+        val outputPath = getFileFromRawResource(this, getInputResourceByKey(selectedVideo), getOutputFilenameByKey(selectedVideo))
+
+        deleteOutputFile(outputPath)
+        println("SELECTED VIDEO: "+selectedVideo)
+
+        val ffmpegCommand = getCommand(selectedVideo );
+        println("COMMAND"+ffmpegCommand);
         println(" * execute");
 
         FFmpegKit.execute(ffmpegCommand);
@@ -240,7 +403,7 @@ class MainActivity : ComponentActivity() {
 
         val outputSize=getFileSize(outputPath)
         println(" * done output size=${outputSize}")
-
+        Toast.makeText(localContext, "Done", Toast.LENGTH_SHORT).show()
     }
 
     fun getFileSize(filePath: String): Long {
@@ -252,9 +415,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-        fun remove_background_async(){
+        fun remove_background_async(selectedVideo:String){
             println("------------------------------------------------------------");
-            val ffmpegCommand = getCommand();
+            val ffmpegCommand = getCommand(selectedVideo );
             println(ffmpegCommand);
             println(" * execute");
 
@@ -285,24 +448,61 @@ class MainActivity : ComponentActivity() {
 
 }
 
+fun getVideoPathByStr(name:String):String{
+
+        return    "android.resource://uk.co.weand.androidvideobgremover/${getInputResourceByKey(name)}";
+}
+
+fun getInputResourceByKey
+            (name:String):Int{
+    if(name== "Grey background dog"){
+        return  R.raw.dogvideo3;
+
+    }else if(name=="Green bg cat"){
+        return  R.raw.greenbgcat;
+    }else {
+        return    R.raw.dogvideo3;
+
+    }
+}
+fun getInputFilenameByKey(name:String):String{
+    if(name== "Grey background dog"){
+        return "dogvideo3.webm";
+
+    }else if(name=="Green bg cat"){
+        return  "greenbgcat.webm";
+    }else {
+        return   "dogvideo3.webm";
+
+    }
+}
+fun getOutputFilenameByKey(name:String):String{
+    if(name== "Grey background dog"){
+        return "output-dogvideo3.mpeg";
+
+    }else if(name=="Green bg cat"){
+        return  "output-greenbgcat.mpeg";
+    }else {
+        return   "output-dogvideo3.mpeg";
+
+    }
+}
+
+
+fun getStrategyByStr(name:String):String{
+return name;
+}
 @Composable
-fun VideoPlayerScreen() {
-    val context = LocalContext.current
+fun VideoPlayerScreen(selectedVideo:String) {
+println("VideoPlayerScreen selectedVideo="+selectedVideo)
     AndroidView(
         factory = { ctx ->
             val videoView = VideoView(ctx)
             println("LOAD");
-            //if read from directory
-            //  val videoDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
-            //val videoFile = File(videoDirectory, "raw/dogvideo.mpeg")
-            // videoView.setVideoURI(Uri.fromFile(videoFile))
-
-            //if read from assets
-            //            val assetFileDescriptor = context.assets.openFd("raw/dogvideo.mpeg")
-            //          videoView.setVideoURI(Uri.parse("file:///android_asset/dogvideo.mpeg"))
 
             // read from resources
-            val videoPath = "android.resource://uk.co.weand.androidvideobgremover/${R.raw.dogvideo3}"
+            val videoPath = getVideoPathByStr(selectedVideo)//"android.resource://uk.co.weand.androidvideobgremover/${R.raw.dogvideo3}"
+            println(videoPath)
             videoView.setVideoURI(Uri.parse(videoPath))
 
             val mediaController = MediaController(ctx)
@@ -315,6 +515,24 @@ fun VideoPlayerScreen() {
             videoView
         },
         modifier = Modifier.fillMaxSize()
+         ,
+        update = { videoView ->
+            println("Updating video URI for videoView with selectedVideo=$selectedVideo")
+
+            // Generate the path based on the new video selection
+            val videoPath = getVideoPathByStr(selectedVideo)
+            videoView.setVideoURI(Uri.parse(videoPath))
+            videoView.start()
+
+            // Set MediaController every time the video updates
+            val mediaController = MediaController(videoView.context)
+            mediaController.setAnchorView(videoView)
+            videoView.setMediaController(mediaController)
+
+            videoView.setOnPreparedListener { mp ->
+                mp.isLooping = true
+            }
+        }
     )
 }
 @Composable
